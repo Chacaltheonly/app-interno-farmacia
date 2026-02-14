@@ -1,0 +1,7 @@
+{
+  "name": "FarmaGestão - App Modular",
+  "description": "Sistema modular de gestão de farmácia com registro de ponto por geolocalização, gestão de férias e provisionamentos financeiros.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

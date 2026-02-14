@@ -1,0 +1,44 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Função para verificar se o usuário logado é um gestor ativo
+    function isGestor() {
+      return request.auth != null && 
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'GESTOR' &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.ativo == true;
+    }
+
+    // Regras para a coleção de usuários
+    match /usuarios/{userId} {
+      // Qualquer um pode criar seu perfil inicial (no cadastro)
+      allow create: if request.auth != null && request.auth.uid == userId;
+      
+      // Usuário pode ler seu próprio perfil. Gestores podem ler todos.
+      allow read: if request.auth != null && (request.auth.uid == userId || isGestor());
+      
+      // Apenas gestores podem mudar 'ativo' e 'role'
+      allow update: if request.auth != null && (
+        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['ativo', 'role'])) ||
+        isGestor()
+      );
+      
+      // Apenas gestores podem deletar usuários
+      allow delete: if isGestor();
+    }
+
+    // Regras para configurações globais
+    match /config/{configId} {
+      allow read: if request.auth != null;
+      allow write: if isGestor();
+    }
+
+    // Regras para pontos eletrônicos
+    match /pontos/{pontoId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isGestor());
+      allow update, delete: if isGestor();
+    }
+  }
+}
